@@ -17,9 +17,9 @@ struct Bot {
 impl EventHandler for Bot {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
-
             let content = match command.data.name.as_str() {
                 "ping" => commands::ping::run(&command.data.options),
+                "setup" => commands::setup::run(&command.data.options),
                 _ => "not done lol :(".to_string(),
             };
 
@@ -39,8 +39,13 @@ impl EventHandler for Bot {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
 
-        let _command = Command::create_global_application_command(&ctx.http, |command| {
+        let _pingcommand = Command::create_global_application_command(&ctx.http, |command| {
             commands::ping::register(command)
+        })
+        .await;
+
+        let _setupcommand = Command::create_global_application_command(&ctx.http, |command| {
+            commands::setup::register(command)
         })
         .await;
     }
@@ -62,11 +67,12 @@ async fn main() {
         .await
         .expect("Couldn't connect to DB");
 
-    sqlx::migrate!("./migrations").run(&database).await.expect("Couldn't run migrations!");
+    sqlx::migrate!("./migrations")
+        .run(&database)
+        .await
+        .expect("Couldn't run migrations!");
 
-    let bot = Bot {
-        database: database,
-    };
+    let bot = Bot { database: database };
 
     let mut client = Client::builder(token, GatewayIntents::empty())
         .event_handler(bot)
